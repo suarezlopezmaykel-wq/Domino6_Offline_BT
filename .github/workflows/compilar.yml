@@ -26,7 +26,7 @@ jobs:
         run: |
           rm -rf project
           mkdir project
-          unzip -q Domino6_Offline_BT_Nuevo.zip -d project
+          unzip -q Domino6_Offline_BT_CORREGIDO.zip -d project
 
       - name: Encontrar proyecto Android
         run: |

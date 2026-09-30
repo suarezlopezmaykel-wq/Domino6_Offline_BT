@@ -1,9 +1,9 @@
 name: Compilar Domino6 Offline BT
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,31 +22,38 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Preparar proyecto
+      - name: Extraer proyecto
         run: |
-          unzip -o Domino6_Offline_BT_Nuevo.zip -d project
-          echo "Contenido extraído:"
-          find project -maxdepth 4 -type f | sort
+          rm -rf project
+          mkdir project
+          unzip -q Domino6_Offline_BT_Nuevo.zip -d project
+
+      - name: Encontrar proyecto Android
+        run: |
+          SETTINGS=$(find project -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -1)
+
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: No se encontró settings.gradle"
+            echo "Contenido del ZIP:"
+            find project -maxdepth 6 -type f | sort
+            exit 1
+          fi
+
+          PROJECT_ROOT=$(dirname "$SETTINGS")
+          echo "Proyecto encontrado en: $PROJECT_ROOT"
+          echo "PROJECT_ROOT=$PROJECT_ROOT" >> "$GITHUB_ENV"
 
       - name: Configurar Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Localizar proyecto Android
-  run: |
-    ROOT=$(find project -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -printf '%h\n' | head -1)
-    echo "Proyecto encontrado en: $ROOT"
-    echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
-
       - name: Compilar APK
-  working-directory: ${{ env.PROJECT_ROOT }}
-  run: gradle assembleDebug --stacktrace
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: gradle assembleDebug --stacktrace
 
       - name: Guardar APK
-  uses: actions/upload-artifact@v4
-  with:
-    name: Domino6-Offline-BT-debug
-    path: ${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/app-debug.apk
-
-      
+        uses: actions/upload-artifact@v4
+        with:
+          name: Domino6-Offline-BT-debug
+          path: ${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/app-debug.apk

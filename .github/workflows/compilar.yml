@@ -39,11 +39,11 @@ jobs:
     echo "Proyecto encontrado en: $ROOT"
     echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
 
-- name: Compilar APK
+      - name: Compilar APK
   working-directory: ${{ env.PROJECT_ROOT }}
   run: gradle assembleDebug --stacktrace
 
-- name: Guardar APK
+      - name: Guardar APK
   uses: actions/upload-artifact@v4
   with:
     name: Domino6-Offline-BT-debug

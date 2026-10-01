@@ -22,21 +22,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-            - name: Localizar proyecto
+      - name: Localizar proyecto
         run: |
           echo "Contenido del repositorio:"
           ls -la
-          echo "Buscando proyecto Android..."
-          find . -maxdepth 3 -name settings.gradle -o -name settings.gradle.kts
 
-      - name: Encontrar proyecto Android
-        run: |
-          SETTINGS=$(find project -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -1)
+          echo "Buscando proyecto Android..."
+          SETTINGS=$(find . -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -1)
 
           if [ -z "$SETTINGS" ]; then
             echo "ERROR: No se encontró settings.gradle"
-            echo "Contenido del ZIP:"
-            find project -maxdepth 6 -type f | sort
+            echo "Archivos encontrados:"
+            find . -maxdepth 5 -type f | sort
             exit 1
           fi
 

@@ -22,11 +22,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extraer proyecto
+            - name: Localizar proyecto
         run: |
-          rm -rf project
-          mkdir project
-          unzip -q Domino6_Offline_BT_CORREGIDO_V2.zip -d project
+          echo "Contenido del repositorio:"
+          ls -la
+          echo "Buscando proyecto Android..."
+          find . -maxdepth 3 -name settings.gradle -o -name settings.gradle.kts
 
       - name: Encontrar proyecto Android
         run: |

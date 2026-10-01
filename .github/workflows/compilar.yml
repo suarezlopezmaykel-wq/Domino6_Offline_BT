@@ -22,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-            - name: Extraer y localizar proyecto
+      - name: Extraer y localizar proyecto
         run: |
           echo "Archivos del repositorio:"
           ls -la

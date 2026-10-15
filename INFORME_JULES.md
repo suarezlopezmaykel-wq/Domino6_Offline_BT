@@ -1,0 +1,85 @@
+# INFORME TÉCNICO DE INSPECCIÓN - DOMINO6 OFFLINE BT
+
+**Fecha de inspección:** 15 de Octubre de 2026
+**Investigador / Agente:** Jules
+**Estado de modificación:** Exclusivamente de lectura (sin cambios en código fuente)
+
+---
+
+## 1. Identificación del Repositorio y Estado del Proyecto
+
+- **Repositorio:** `https://github.com/suarezlopezmaykel-wq/Domino6_Offline_BT`
+- **Rama actual:** `jules-9846497619956500543-ba9cd156`
+- **Último Commit:** `74380fe14720901e5d4722abe30fc6938c86baff`
+- **Mensaje del Commit:** `Eliminar Domino6_Offline_BT_CORREGIDO_V4_APLICADO_V16.zip`
+- **Estado de coincidencia:** El código fuente analizado corresponde fielmente al proyecto *Domino6 Offline BT*, empaquetado y extraído desde `Domino6_V15.zip` (que contiene `MainActivity.java` y la estructura Android intacta).
+
+---
+
+## 2. Descripción Exacta del Defecto
+
+Cuando la cadena de fichas llega al borde del tablero y realiza un cambio de dirección (giro hacia arriba en la rama derecha o giro hacia abajo en la rama izquierda):
+- Las fichas de giro (fichas en orientación vertical) no se colocan a continuación de la última ficha horizontal respetando su extremo libre, sino que se dibujan **desplazadas hacia el centro de la última ficha horizontal**.
+- Esto produce un solapamiento visual directo de 34 píxeles (el ancho de la ficha vertical) sobre los 52 píxeles de la ficha horizontal previa, rompiendo la continuidad limpia de la cadena en los giros.
+
+---
+
+## 3. Respuestas al Cuestionario Técnico
+
+### A. ¿Qué archivo y qué función controlan la posición de las fichas cuando cambia la dirección de la cadena?
+- **Archivo:** `app/src/main/java/com/example/domino6/MainActivity.java`
+- **Clase interna:** `BoardView`
+- **Función:** `void drawBranch(Canvas c, int index, int step, float cx, float cy)`
+
+### B. ¿Cuál es la causa concreta del desplazamiento incorrecto hacia el centro de la otra ficha?
+En `drawBranch`, cuando una ficha horizontal no cabe en la fila actual (`left < margin` o `right > W - margin`), se ejecuta el bloque `else` para realizar el giro vertical.
+
+Para calcular la coordenada X de la columna vertical de giro (`colX`), el código ejecuta:
+```java
+float colX = rowDir > 0 ? xEdge - verticalW / 2f : xEdge + verticalW / 2f;
+```
+- Para una fila que avanza hacia la derecha (`rowDir > 0`), la última ficha horizontal dibujada ocupa el rango X de `[xEdge - 52, xEdge]`.
+- Al calcular `colX = xEdge - 34 / 2f = xEdge - 17`, la ficha vertical (cuyo ancho es `verticalW = 34`) se dibuja centrada en `xEdge - 17`, abarcando el rango X de `[xEdge - 34, xEdge]`.
+- **Efecto:** La ficha vertical se dibuja **sobre los últimos 34 píxeles de la ficha horizontal anterior** (entrando hacia su centro), en lugar de posicionarse alineada con el borde correcto o extremo de giro.
+
+### C. ¿Qué cálculo o condición está fallando?
+Están fallando dos aspectos geométricos en el bloque `else` de `drawBranch`:
+1. **Posicionamiento horizontal de la columna vertical (`colX`):** El centro X de las fichas verticales de giro se retrocede la mitad del ancho de la ficha vertical (`verticalW / 2f`) con respecto al borde exterior `xEdge`, solapando directamente el cuerpo de la última ficha horizontal de la fila.
+2. **Actualización de `xEdge` para la siguiente fila:** Se resta/suma un ancho vertical completo (`xEdge = rowDir > 0 ? xEdge - verticalW : xEdge + verticalW`), lo que ocasiona que la primera ficha de la nueva fila empiece pegada al borde interior de la columna vertical, pero la conexión entre la fila anterior y la ficha vertical queda geométricamente encimada.
+
+### D. ¿Cuál sería la modificación mínima necesaria para corregirlo?
+Ajustar los cálculos de coordenadas en la transición del giro dentro de `drawBranch` en `MainActivity.java`:
+1. Calcular la posición `colX` de la ficha vertical de giro para que quede correctamente adosada/alineada al extremo o esquina de la ficha horizontal que origina el giro sin solapar su área central.
+2. Asegurar que las coordenadas Y (`yc`) y X (`xEdge`) de la transición mantengan continuidad geométrica exacta según si la rama sube (`vs = -1`) o baja (`vs = +1`).
+
+### E. ¿Cómo garantizarías que las fichas queden unidas correctamente y respeten la dirección de la cadena?
+Definiendo de forma matemática exacta los puntos de contacto (puntos de unión de mitad de ficha) entre:
+- Extremo libre de ficha horizontal $\rightarrow$ Extremo/Lado de ficha vertical de giro.
+- Extremo/Lado de ficha vertical de giro $\rightarrow$ Extremo inicial de nueva ficha horizontal.
+
+### F. ¿Cómo comprobarías que el arreglo no desplaza las fichas que ya están correctamente colocadas?
+- La primera ficha central y todas las fichas en filas horizontales intermedias mantendrán intactas sus fórmulas de renderizado (`drawHorizontal` y las condiciones de `placedInRow`).
+- Se verificará que las posiciones $X, Y$ de las fichas en la fila 0 (central) no cambian en absoluto.
+
+### G. ¿Qué pruebas serían necesarias para verificar los giros en ambos extremos, las secuencias de varias fichas y el funcionamiento general?
+1. **Prueba de giro en rama derecha (subida):** Colocar fichas hasta forzar 1 y 2 giros hacia arriba a la derecha.
+2. **Prueba de giro en rama izquierda (bajada):** Colocar fichas hasta forzar 1 y 2 giros hacia abajo a la izquierda.
+3. **Prueba con dobles y fichas consecutivas tras giro:** Verificar que tras el giro, las fichas horizontales continúan la secuencia sin desplazamientos indeseados.
+4. **Prueba de regresión visual:** Confirmar que el tablero se renderiza sin solapamientos en pantallas de distintas resoluciones/densidades.
+
+### H. ¿Qué archivos necesitarías modificar y por qué?
+- **Único archivo a modificar:** `app/src/main/java/com/example/domino6/MainActivity.java`
+- **Razón:** Es el único archivo donde reside la lógica de dibujado del tablero (`BoardView.drawBranch`). Ningún otro archivo del proyecto requiere cambios.
+
+---
+
+## 4. Confirmación Explícita de Restricción
+
+> **CONFIRMACIÓN:** Durante esta fase de inspección y análisis técnico **NO SE HA MODIFICADO EL CÓDIGO FUENTE NI LA LÓGICA DEL JUEGO**. Se ha respetado al 100% la indicación de lectura exclusiva. No se han realizado cambios funcionales ni refactorizaciones.
+
+---
+
+## 5. Enlace al Informe en GitHub
+
+El informe se encuentra almacenado y accesible directamente en el repositorio en la rama examinada:
+[INFORME_JULES.md en GitHub](https://github.com/suarezlopezmaykel-wq/Domino6_Offline_BT/blob/jules-9846497619956500543-ba9cd156/INFORME_JULES.md)

@@ -1,19 +1,25 @@
-# INFORME TÉCNICO DE IMPLEMENTACIÓN Y ANÁLISIS GEOMÉTRICO DETALLADO - DOMINO6 OFFLINE BT
+# INFORME TÉCNICO DE IMPLEMENTACIÓN Y ANÁLISIS GEOMÉTRICO DEFECTO DE GIROS - DOMINO6 OFFLINE BT
 
 **Fecha:** 15 de Octubre de 2026
 **Investigador / Agente:** Jules
-**Rama:** `jules-9846497619956500543-ba9cd156`
+**Rama de trabajo:** `jules-9846497619956500543-ba9cd156`
 **Repositorio:** `https://github.com/suarezlopezmaykel-wq/Domino6_Offline_BT`
 
 ---
 
-## 1. RESUMEN DE LA CORRECCIÓN GEOMÉTRICA DE GIROS
+## 1. DIAGNÓSTICO DEL DEFECTO Y CAUSA GEOMÉTRICA RAÍZ
 
-### Archivo y Función Modificados:
-- **Archivo:** `app/src/main/java/com/example/domino6/MainActivity.java` (y sincronizado en `Domino6_V15.zip`)
-- **Función:** `BoardView.drawBranch(Canvas c, int index, int step, float cx, float cy)`
+### Evidencia de la prueba real y causa matemática:
+1. En ejecuciones anteriores, se sumaba/restaba una distancia adicional `verticalW` (34 px) sobre $xEdge$ dentro del bloque de giro `else`.
+2. Como la última ficha horizontal dibujada que sí cupo en pantalla ocupaba el intervalo $[xEdge - 52, xEdge]$ (para `rowDir > 0`), el borde libre exterior de la cadena es $xEdge$.
+3. Al modificar $xEdge$ restándole $34$ px (`xEdge = xEdge - verticalW`), el valor de $xEdge$ retrocedía artificialmente a $xEdge - 34$.
+4. Cuando el bucle invertía el sentido de avance (`rowDir = -rowDir`), la primera ficha horizontal de la nueva fila colocaba su borde exterior derecho en el $xEdge$ desfasado ($xEdge - 34$), provocando un desplazamiento lateral de $34$ píxeles. Esto originaba un desempalme visual entre la columna de giros y la nueva fila horizontal.
 
-### Fórmula Real Implementada en el Código:
+---
+
+## 2. SOLUCIÓN GEOMÉTRICA DE CONTIGÜIDAD APLICADA
+
+### Código exacto implementado en `BoardView.drawBranch()` (`MainActivity.java`):
 ```java
 float colX = rowDir > 0 ? xEdge - verticalW / 2f : xEdge + verticalW / 2f;
 int vertCount = 0;
@@ -26,41 +32,32 @@ for (int k = 0; k < 2 && index >= 0 && index < g.board.size(); k++) {
     index += step;
     vertCount++;
 }
-xEdge = rowDir > 0 ? xEdge - verticalW : xEdge + verticalW;
 y = y + vs * (normalH + vertCount * verticalH);
 rowDir = -rowDir;
 placedInRow = false;
 ```
 
----
-
-## 2. ANÁLISIS GEOMÉTRICO EXACTO DE LAS FICHAS
-
-1. **Alineación horizontal de la columna de giro (`colX`):**
-   - Cuando la fila avanza a la derecha (`rowDir > 0`), la última ficha horizontal que cupo abarca $X \in [xEdge - 52, xEdge]$. Su borde libre exterior es $X = xEdge$.
-   - La columna vertical (ancho $verticalW = 34$) se coloca abarcando $X \in [xEdge - 34, xEdge]$, teniendo su centro en `colX = xEdge - verticalW / 2f` ($xEdge - 17$). Esto adosa la columna exactamente en la esquina exterior sin sobresalir.
-   - Cuando la fila avanza a la izquierda (`rowDir < 0`), la ficha horizontal ocupa $[xEdge, xEdge + 52]$. La columna se coloca en $[xEdge, xEdge + 34]$ con centro `colX = xEdge + verticalW / 2f` ($xEdge + 17$).
-
-2. **Siguiente fila horizontal (`xEdge`):**
-   - Para que la nueva fila horizontal (que avanza en dirección opuesta `rowDir = -rowDir`) parta exactamente desde el borde interior libre de la columna vertical sin encimarse sobre los 34 px de las fichas de giro, $xEdge$ se actualiza con `xEdge = rowDir > 0 ? xEdge - verticalW : xEdge + verticalW`.
-
-3. **Salto vertical $Y$ (`y`):**
-   - La altura ocupada por las fichas de giro es `vertCount * verticalH`. El salto vertical hacia la siguiente fila horizontal se calcula mediante `y = y + vs * (normalH + vertCount * verticalH);`, garantizando la contigüidad $Y$ exacta.
+### Principios de la solución:
+- **Centrado de la columna de giro (`colX`):** Para `rowDir > 0`, `colX = xEdge - verticalW / 2f` coloca las fichas verticales abarcando el intervalo $[xEdge - 34, xEdge]$, quedando perfectamente alineadas con el extremo derecho libre de la fila anterior.
+- **Sin desfasaje en $xEdge$:** Se eliminó la reasignación de $xEdge$. La nueva fila horizontal utiliza $xEdge$ como su límite exterior contiguo, iniciando su trazado exactamente en tangente a la columna vertical sin huecos ni saltos laterales.
+- **Salto Vertical exacto ($Y$):** `y = y + vs * (normalH + vertCount * verticalH)` calcula la distancia $Y$ acumulada exacta según las `vertCount` fichas verticales realmente colocadas (evitando colisiones verticales en giros sucesivos).
 
 ---
 
-## 3. ADAPTACIÓN A DISPOSITIVOS (SAMSUNG GALAXY A03 CORE & TABLET ANDROID 13)
+## 3. ADAPTACIÓN RESPONSIVE A PANTALLAS (SAMSUNG GALAXY A03 CORE & TABLET ANDROID 13)
 
-- **Diseño fluido del tablero:** Se utiliza `int side = Math.max(440, Math.min(getResources().getDisplayMetrics().widthPixels, 560));`, adaptando el área del tablero dinámicamente según el ancho en píxeles/densidad disponible.
-- **Zona de usuario:** Utiliza `HorizontalScrollView` con `setFillViewport(true)` para soportar de manera fluida pantallas de teléfonos compactos como Samsung Galaxy A03 Core y tablets Android 13 de alta resolución.
-- **Limitación de Pruebas Visuales:** En el entorno sandbox carecemos de pantalla gráfica GUI o emulador Android físico. La prueba visual final interactiva se realizará instalando el APK generado por GitHub Actions.
+- **Escalado del tablero:** `int side = Math.max(440, Math.min(getResources().getDisplayMetrics().widthPixels, 560));` escala el tablero en píxeles de pantalla proporcionalmente.
+- **Mano del jugador:** `HorizontalScrollView` con `setFillViewport(true)` permite visualización fluida sin solapamientos en dispositivos de 720p (como Samsung Galaxy A03 Core) y pantallas de mayor resolución de tablets Android 13.
+- **Declaración sobre pruebas visuales:** En el entorno sandbox no contamos con un emulador Android gráfico GUI o dispositivos físicos conectados. La prueba de compilación en GitHub Actions garantiza que el código fuente compila limpiamente, pero la verificación visual interactiva debe realizarse instalando el APK generado en el dispositivo.
 
 ---
 
-## 4. ESTADO DE COMPILACIÓN Y ARTEFACTO GITHUB ACTIONS
+## 4. ARCHIVOS MODIFICADOS Y SYNCRONIZACIÓN
 
-- **Disparador CI:** `.github/workflows/compilar.yml` activo para todas las ramas (`branches: [ "**" ]`).
-- **Artefacto APK:** Generado automáticamente bajo el nombre `Domino6-Offline-BT-debug.apk`.
+1. `app/src/main/java/com/example/domino6/MainActivity.java`
+2. `Domino6_V15.zip`
+3. `.github/workflows/compilar.yml`
+4. `INFORME_JULES.md`
 
 ---
 
@@ -68,4 +65,4 @@ placedInRow = false;
 
 - **Informe en GitHub:** [INFORME_JULES.md](https://github.com/suarezlopezmaykel-wq/Domino6_Offline_BT/blob/jules-9846497619956500543-ba9cd156/INFORME_JULES.md)
 - **Acceso a GitHub Actions:** [Pestaña Actions en el Repositorio](https://github.com/suarezlopezmaykel-wq/Domino6_Offline_BT/actions)
-- **Confirmación de NO FUSIÓN:** No se han realizado fusiones hacia la rama principal `main`.
+- **Confirmación de NO FUSIÓN:** La rama no ha sido fusionada hacia `main`.

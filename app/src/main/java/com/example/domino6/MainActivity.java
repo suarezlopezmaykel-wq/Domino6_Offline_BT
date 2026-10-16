@@ -170,7 +170,6 @@ public class MainActivity extends Activity {
                         index+=step;
                         vertCount++;
                     }
-                    xEdge=rowDir>0?xEdge-verticalW:xEdge+verticalW;
                     y=y+vs*(normalH+vertCount*verticalH);
                     rowDir=-rowDir;
                     placedInRow=false;

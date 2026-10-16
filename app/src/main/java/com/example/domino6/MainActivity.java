@@ -161,7 +161,7 @@ public class MainActivity extends Activity {
                     if(!placedInRow)return; // ni una ficha cabe: evita bucle infinito
                     float colX=rowDir>0?xEdge-verticalW/2f:xEdge+verticalW/2f;
                     int vertCount=0;
-                    for(int k=0;k<2&&index>=0&&index<g.board.size();k++){
+                    for(int k=0;k<1&&index>=0&&index<g.board.size();k++){
                         D v=g.board.get(index);
                         int vn=step>0?v.a:v.z, vf=step>0?v.z:v.a;
                         float yc=y+vs*(normalH/2f+verticalH/2f+k*verticalH);

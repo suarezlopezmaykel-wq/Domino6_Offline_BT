@@ -159,7 +159,7 @@ public class MainActivity extends Activity {
                     placedInRow=true;
                 }else{
                     if(!placedInRow)return; // ni una ficha cabe: evita bucle infinito
-                    float colX=rowDir>0?xEdge-verticalW/2f:xEdge+verticalW/2f;
+                    float colX=rowDir>0?xEdge+verticalW/2f:xEdge-verticalW/2f;
                     int vertCount=0;
                     for(int k=0;k<2&&index>=0&&index<g.board.size();k++){
                         D v=g.board.get(index);
@@ -170,7 +170,6 @@ public class MainActivity extends Activity {
                         index+=step;
                         vertCount++;
                     }
-                    xEdge=rowDir>0?xEdge-verticalW:xEdge+verticalW;
                     y=y+vs*(normalH+vertCount*verticalH);
                     rowDir=-rowDir;
                     placedInRow=false;
